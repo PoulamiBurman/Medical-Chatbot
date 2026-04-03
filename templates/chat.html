@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediBot — Medical Assistant</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0e14;
+            color: #e2e8f0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Subtle animated background grid */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(0, 180, 160, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 180, 160, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            animation: gridMove 20s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(40px); }
+        }
+
+        /* Glowing orb in background */
+        body::after {
+            content: '';
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(0, 180, 160, 0.06) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+        }
+
+        .wrapper {
+            display: flex;
+            flex-direction: column;
+            width: 780px;
+            height: 88vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 20px 24px;
+            background: #0d1117;
+            border: 1px solid #1e2a38;
+            border-bottom: none;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .logo {
+            width: 42px;
+            height: 42px;
+            background: #0a2a2a;
+            border: 1px solid #00b4a0;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .logo svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .logo-pulse {
+            position: absolute;
+            inset: -4px;
+            border-radius: 13px;
+            border: 1px solid rgba(0, 180, 160, 0.3);
+            animation: logoPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes logoPulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.08); }
+        }
+
+        .header-text h1 {
+            font-size: 17px;
+            font-weight: 600;
+            color: #e2e8f0;
+            letter-spacing: 0.3px;
+        }
+
+        .header-text p {
+            font-size: 12px;
+            color: #4a6580;
+            margin-top: 2px;
+        }
+
+        .status {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12px;
+            color: #00b4a0;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #00b4a0;
+            animation: blink 2s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Divider line with glow */
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00b4a0, transparent);
+            opacity: 0.4;
+        }
+
+        /* Chat box */
+        .chat-box {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background: #0d1117;
+            border-left: 1px solid #1e2a38;
+            border-right: 1px solid #1e2a38;
+            scroll-behavior: smooth;
+        }
+
+        .chat-box::-webkit-scrollbar { width: 4px; }
+        .chat-box::-webkit-scrollbar-track { background: transparent; }
+        .chat-box::-webkit-scrollbar-thumb { background: #1e2a38; border-radius: 4px; }
+
+        /* Messages */
+        .message-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .message-row.user { flex-direction: row-reverse; }
+
+        .avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .avatar.bot {
+            background: #0a2a2a;
+            border: 1px solid #00b4a033;
+            color: #00b4a0;
+        }
+
+        .avatar.user {
+            background: #1a2535;
+            border: 1px solid #2a3a50;
+            color: #7a9cc0;
+        }
+
+        .bubble {
+            max-width: 68%;
+            padding: 13px 16px;
+            border-radius: 14px;
+            font-size: 14px;
+            line-height: 1.65;
+            animation: fadeUp 0.3s ease;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .bubble.bot {
+            background: #111820;
+            border: 1px solid #1e2a38;
+            color: #c8d8e8;
+            border-bottom-left-radius: 4px;
+        }
+
+        .bubble.user {
+            background: #0a2a2a;
+            border: 1px solid #00b4a033;
+            color: #b0d8d0;
+            border-bottom-right-radius: 4px;
+        }
+
+        /* Typing indicator */
+        .typing-bubble {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            padding: 14px 18px;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #00b4a0;
+            animation: dotBounce 1.2s ease-in-out infinite;
+        }
+
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes dotBounce {
+            0%, 100% { transform: translateY(0); opacity: 0.4; }
+            50% { transform: translateY(-5px); opacity: 1; }
+        }
+
+        /* Timestamp */
+        .timestamp {
+            font-size: 10px;
+            color: #2a3a50;
+            margin: 0 40px;
+            text-align: center;
+        }
+
+        /* Input area */
+        .input-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            background: #0d1117;
+            border: 1px solid #1e2a38;
+            border-top: none;
+            border-radius: 0 0 16px 16px;
+        }
+
+        .input-wrap {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background: #111820;
+            border: 1px solid #1e2a38;
+            border-radius: 10px;
+            padding: 0 14px;
+            transition: border-color 0.2s;
+        }
+
+        .input-wrap:focus-within {
+            border-color: #00b4a055;
+        }
+
+        .input-wrap input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #c8d8e8;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            padding: 13px 0;
+        }
+
+        .input-wrap input::placeholder { color: #2a3a50; }
+
+        .send-btn {
+            width: 42px;
+            height: 42px;
+            background: #00b4a0;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, transform 0.1s;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover { background: #00cdb8; }
+        .send-btn:active { transform: scale(0.95); }
+
+        .send-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: #0a0e14;
+        }
+
+        /* Quick suggestion chips */
+        .suggestions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 0 24px 12px;
+            background: #0d1117;
+            border-left: 1px solid #1e2a38;
+            border-right: 1px solid #1e2a38;
+        }
+
+        .chip {
+            font-size: 12px;
+            color: #4a6580;
+            border: 1px solid #1e2a38;
+            border-radius: 20px;
+            padding: 5px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: transparent;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .chip:hover {
+            border-color: #00b4a044;
+            color: #00b4a0;
+            background: #0a2a2a55;
+        }
+
+        /* EKG line decoration */
+        .ekg-bar {
+            padding: 6px 24px 0;
+            background: #0d1117;
+            border-left: 1px solid #1e2a38;
+            border-right: 1px solid #1e2a38;
+        }
+
+        .ekg-bar svg {
+            width: 100%;
+            height: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+
+    <div class="header">
+        <div class="logo">
+            <div class="logo-pulse"></div>
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 4v4M12 16v4M4 12h4M16 12h4" stroke="#00b4a0" stroke-width="2" stroke-linecap="round"/>
+                <rect x="8" y="8" width="8" height="8" rx="2" fill="#00b4a022" stroke="#00b4a0" stroke-width="1.5"/>
+            </svg>
+        </div>
+        <div class="header-text">
+            <h1>MediBot</h1>
+            <p>AI-Powered Medical Assistant</p>
+        </div>
+        <div class="status">
+            <div class="status-dot"></div>
+            Online
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="ekg-bar">
+        <svg viewBox="0 0 730 20" preserveAspectRatio="none">
+            <polyline
+                points="0,10 60,10 70,10 80,2 90,18 100,2 110,14 120,10 200,10 260,10 270,3 280,17 290,3 300,13 310,10 400,10 460,10 470,2 480,18 490,2 500,14 510,10 600,10 660,10 670,3 680,17 690,3 700,13 710,10 730,10"
+                fill="none"
+                stroke="#00b4a0"
+                stroke-width="1.2"
+                opacity="0.4"
+            />
+        </svg>
+    </div>
+
+    <div class="chat-box" id="chatBox">
+        <div class="message-row">
+            <div class="avatar bot">+</div>
+            <div class="bubble bot">Hello, I'm MediBot — your AI medical assistant. Describe your symptoms or ask me any health-related question and I'll do my best to help.</div>
+        </div>
+        <div class="timestamp">Today</div>
+    </div>
+
+    <div class="suggestions" id="suggestions">
+        <button class="chip" onclick="quickSend('I have a headache')">Headache</button>
+        <button class="chip" onclick="quickSend('I have chest pain')">Chest pain</button>
+        <button class="chip" onclick="quickSend('I have a fever')">Fever</button>
+        <button class="chip" onclick="quickSend('I feel dizzy')">Dizziness</button>
+        <button class="chip" onclick="quickSend('I have back pain')">Back pain</button>
+    </div>
+
+    <div class="input-area">
+        <div class="input-wrap">
+            <input type="text" id="userInput" placeholder="Describe your symptoms..." onkeypress="handleKey(event)" autocomplete="off"/>
+        </div>
+        <button class="send-btn" onclick="sendMessage()">
+            <svg viewBox="0 0 24 24"><path d="M2 12L22 2L14 22L11 13L2 12Z"/></svg>
+        </button>
+    </div>
+
+</div>
+
+<script>
+    function handleKey(e) {
+        if (e.key === 'Enter') sendMessage();
+    }
+
+    function quickSend(text) {
+        document.getElementById('userInput').value = text;
+        sendMessage();
+        document.getElementById('suggestions').style.display = 'none';
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('userInput');
+        const chatBox = document.getElementById('chatBox');
+        const msg = input.value.trim();
+        if (!msg) return;
+
+        document.getElementById('suggestions').style.display = 'none';
+
+        chatBox.innerHTML += `
+            <div class="message-row user">
+                <div class="avatar user">U</div>
+                <div class="bubble user">${msg}</div>
+            </div>`;
+        input.value = '';
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        const typingId = 'typing-' + Date.now();
+        chatBox.innerHTML += `
+            <div class="message-row" id="${typingId}">
+                <div class="avatar bot">+</div>
+                <div class="bubble bot typing-bubble">
+                    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                </div>
+            </div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        const formData = new FormData();
+        formData.append('msg', msg);
+
+        const res = await fetch('/get', { method: 'POST', body: formData });
+        const answer = await res.text();
+
+        document.getElementById(typingId).remove();
+        chatBox.innerHTML += `
+            <div class="message-row">
+                <div class="avatar bot">+</div>
+                <div class="bubble bot">${answer}</div>
+            </div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+</script>
+</body>
+</html>
